@@ -5,7 +5,7 @@ var program = require('commander');
 
 const handlePath = (name) => {
     let tempName = name.split('/');
-    tempName = tempName.length === 1 ? name.split('\\') : name;
+    tempName = tempName.length === 1 ? name.split('\\') : tempName;
     let filename = tempName.length === 1 ? name : tempName[tempName.length - 1];
     let path = tempName.splice(0, tempName.length - 1).toString().replace(/,/g, '/') + '/';
     let component = filename[0].toUpperCase() + filename.slice(1);
@@ -50,20 +50,12 @@ program
 
                 const tsFileContent = `import * as React from 'react';
 import './${filename}.scss';
-export default class ${component} extends React.Component {
-    render() {
-        return (
-            <div>
-                ${component} works!
-            </div>
-        );
-    }
-}`;
+export const ${component} = () => <div>${component} works!</div>`;
 
                 const cssFileContent = `/* ${filename} scss */`;
                 const testFileContent = `import React from 'react';
 import { render } from '@testing-library/react';
-import ${component} from './${filename}';
+import { ${component} } from './${filename}';
 
 test('renders ${filename}', () => {
   const { getByText } = render(<${component}/>);

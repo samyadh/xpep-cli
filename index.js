@@ -1,92 +1,139 @@
 #!/usr/bin/env node
-
+const content = require('./contents');
+const execSync = require('child_process').execSync;
 const fse = require('fs-extra');
+const util = require('util');
 var program = require('commander');
 
+let filename, path, component;
+
 const handlePath = (name) => {
-    let tempName = name.split('/');
-    tempName = tempName.length === 1 ? name.split('\\') : tempName;
-    let filename = tempName.length === 1 ? name : tempName[tempName.length - 1];
-    let path = tempName.splice(0, tempName.length - 1).toString().replace(/,/g, '/') + '/';
-    let component = filename[0].toUpperCase() + filename.slice(1);
-    return { filename, path, component };
+	let tempName = name.split('/');
+	tempName = tempName.length === 1 ? name.split('\\') : tempName;
+	filename = tempName.length === 1 ? name : tempName[tempName.length - 1];
+	path = tempName.splice(0, tempName.length - 1).toString().replace(/,/g, '/') + '/';
+	component = filename[0].toUpperCase() + filename.slice(1);
+};
+
+program.command('gpull').action(function() {
+	gitPull();
+});
+
+program.command('gpush').action(function() {
+	gitPush();
+});
+
+program.command('gs').action(function() {
+	gitSync();
+});
+
+program.command('gf').action(function() {
+	gitFetch();
+});
+
+program.command('ngc').arguments('<name>').action(function(name) {
+	handlePath(name);
+	genrateAngularComponent();
+});
+
+program.command('rgc').arguments('<name>').option('-t, --type <type>', 'Type of file required').action(function(name) {
+	handlePath(name);
+	genrateReactComponent();
+});
+
+program.command('cf').arguments('<name>').option('-t, --type <type>', 'Type of file required').action(function(name) {
+	handlePath(name);
+	createFile();
+});
+
+program.command('cfo').arguments('<name>').action(function(name) {
+	handlePath(name);
+	createFolder();
+});
+
+program.parse(process.argv);
+
+function genrateAngularComponent() {
+	const output = execSync('ng g c ' + path + filename, { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output);
 }
 
-program
-    .arguments('<name>')
-    .requiredOption('-l, --language <r:react||a:angular||n:none>', 'it\'s an react helper')
-    .requiredOption('-g, --genrate <c:component||m:module||s:service||fo:folder||f:file>', 'to genrate a entity, c for component, m for module')
-    .option('-t, --type <type>', 'Type of file required')
-    .action(function (name) {
-        let { filename, path, component } = handlePath(name);
-        if (program.language === 'n') {
-            if (program.genrate === 'f') {
-                const extention = program.type ? program.type : 'js';
+function genrateReactComponent() {
+	const extention = program.type ? program.type : 'jsx';
 
-                fse.outputFile(`./${path}${filename}.${extention}`, `// ${filename}.${extention} file contents!`, err => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        console.log(`${filename}.${extention} created!`);
-                    }
-                });
-            }
+	fse.outputFile(
+		`./${path}${filename}/${filename}.${extention}`,
+		util.format(content.rtsxFileContent, filename, component, component),
+		(err) => {
+			if (err) {
+				console.log(err);
+			} else {
+				console.log(`${filename}.${extention} created!`);
+			}
+		}
+	);
 
-            if (program.genrate === 'fo') {
-                const extention = program.type ? program.type : 'js';
-                fse.mkdirs(`./${path}${filename}`, err => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        console.log(`${filename} folder created!`);
-                    }
-                });
-            }
-        }
+	fse.outputFile(`./${path}${filename}/${filename}.scss`, util.format(content.rcssFileContent, filename), (err) => {
+		if (err) {
+			console.log(err);
+		} else {
+			console.log(`${filename}.css created!`);
+		}
+	});
 
-        if (program.language === 'r') {
-            if (program.genrate === 'c') {
-                const extention = program.type ? program.type : 'jsx';
+	fse.outputFile(
+		`./${path}${filename}/${filename}.test.${extention}`,
+		util.format(content.rtestFileContent, component, filename, filename, component, component),
+		(err) => {
+			if (err) {
+				console.log(err);
+			} else {
+				console.log(`${filename}.test.${extention} created!`);
+			}
+		}
+	);
+}
 
-                const tsFileContent = `import * as React from 'react';
-import './${filename}.scss';
-export const ${component} = () => <div>${component} works!</div>`;
+function createFile() {
+	const extention = program.type ? program.type : 'js';
 
-                const cssFileContent = `/* ${filename} scss */`;
-                const testFileContent = `import React from 'react';
-import { render } from '@testing-library/react';
-import { ${component} } from './${filename}';
+	fse.outputFile(`./${path}${filename}.${extention}`, `// ${filename}.${extention} file contents!`, (err) => {
+		if (err) {
+			console.log(err);
+		} else {
+			console.log(`${filename}.${extention} created!`);
+		}
+	});
+}
 
-test('renders ${filename}', () => {
-  const { getByText } = render(<${component}/>);
-  const divElement = getByText(/${component} works!/i);
-  expect(divElement).toBeInTheDocument();
-});`
+function createFolder() {
+	fse.mkdirs(`./${path}${filename}`, (err) => {
+		if (err) {
+			console.log(err);
+		} else {
+			console.log(`${filename} folder created!`);
+		}
+	});
+}
 
-                fse.outputFile(`./${path}${filename}/${filename}.${extention}`, tsFileContent, err => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        console.log(`${filename}.${extention} created!`);
-                    }
-                });
+function gitPull() {
+	const output = execSync('git pull', { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output);
+}
 
-                fse.outputFile(`./${path}${filename}/${filename}.scss`, cssFileContent, err => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        console.log(`${filename}.css created!`);
-                    }
-                });
+function gitFetch() {
+	const output = execSync('git fetch', { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output);
+}
 
-                fse.outputFile(`./${path}${filename}/${filename}.test.${extention}`, testFileContent, err => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        console.log(`${filename}.test.${extention} created!`);
-                    }
-                });
-            }
-        }
-    })
-    .parse(process.argv);
+function gitPush() {
+	const output = execSync('git push', { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output);
+}
+
+function gitSync() {
+	const output1 = execSync('git fetch && git pull', { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output1);
+	const output2 = execSync('git push', { encoding: 'utf-8' }); // the default is 'buffer'
+	console.log(output2);
+}

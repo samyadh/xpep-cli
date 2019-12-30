@@ -1,2 +1,2 @@
 # xpep-cli
-A CLI tool to make developer's life easy
+A CLI tool to make frontend developer's life easy
